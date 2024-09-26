@@ -8,7 +8,7 @@
 #include "host/ble_store.h"
 
 #define LOG_TAG_MAIN "main"
-
+static uint16_t ble_conn_handle;
 bool run_diagnostics() {
   // do some diagnostics
   return true;
@@ -37,6 +37,15 @@ static void bleprph_set_security_params(void) {
 static int bleprph_gap_event(struct ble_gap_event *event, void *arg) {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
+            ESP_LOGI(LOG_TAG_MAIN, "/*----------Connection established*-----------/");
+              ble_conn_handle = event->connect.conn_handle;
+              ESP_LOGI(LOG_TAG_MAIN, "Connection handle: %d", ble_conn_handle);
+              // Initiate MTU exchange
+              ble_att_set_preferred_mtu(BLE_ATT_MTU_MAX);
+              int rc = ble_gattc_exchange_mtu(ble_conn_handle, NULL, NULL);
+              if (rc != 0) {
+                  ESP_LOGE(LOG_TAG_MAIN, "Error initiating MTU exchange; rc=%d", rc);
+              }
             ESP_LOGI("BLE", "Connection established");
             break;
         case BLE_GAP_EVENT_DISCONNECT:
@@ -106,12 +115,19 @@ void app_main(void) {
   
   // initialize BLE controller and nimble stack
   //esp_nimble_hci_and_controller_init();
-  nimble_port_init();
 
+
+
+  nimble_port_init();
+  
+  
+  //ble_gap_set_data_len(ble_hs_cfg, 0x00fb, 0x4290);
+  //pritnf("Device operating in Bluetooth Mode: %d", CONFIG_BT_DEVICE_NAME);
   // register sync and reset callbacks
+  
   ble_hs_cfg.sync_cb = sync_cb;
   ble_hs_cfg.reset_cb = reset_cb;
-
+  
   // initialize service table
   gatt_svr_init();
 
@@ -121,8 +137,7 @@ void app_main(void) {
   // Set security parameters
   bleprph_set_security_params();
 
-  // Register GAP event handler
-  ble_gap_event_listener_register(bleprph_gap_event, NULL, NULL);
+
 
   nimble_port_freertos_init(host_task);
 }

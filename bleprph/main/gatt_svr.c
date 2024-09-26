@@ -1,4 +1,9 @@
 #include "gatt_svr.h"
+#define DATA_SIZE 2500
+#define FILL_ARRAY(arr, size) \
+    for (int i = 0; i < size; i++) { \
+        arr[i] = i; \
+    }
 
 uint8_t gatt_svr_chr_ota_control_val;
 uint8_t gatt_svr_chr_ota_data_val[512];
@@ -14,6 +19,9 @@ uint16_t packet_size = 0;
 
 static const char *manuf_name = "EATON";
 static const char *model_num = "ESP32_Test_Device";
+
+// fill this data with the index
+uint8_t data_chunk[DATA_SIZE]= {0};
 
 static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len,
                               uint16_t max_len, void *dst, uint16_t *len);
@@ -32,6 +40,9 @@ static int gatt_svr_chr_access_device_info(uint16_t conn_handle,
                                            struct ble_gatt_access_ctxt *ctxt,
                                            void *arg);
 
+static int gatt_svr_chr_access_512_bytes(uint16_t conn_handle, uint16_t attr_handle,
+                                  struct ble_gatt_access_ctxt *ctxt, void *arg);
+                                  
 static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
   /*
   
@@ -41,9 +52,9 @@ static const ble_uuid16_t gatt_svr_chr_get_model_number_uuid = BLE_UUID16_INIT(G
   
   * */
     {// Service: Device Information
-     .type = BLE_GATT_SVC_TYPE_PRIMARY,
-     .uuid = &gatt_svr_svc_get_device_info_uuid.u,
-     .characteristics =
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &gatt_svr_svc_get_device_info_uuid.u,
+        .characteristics =
          (struct ble_gatt_chr_def[]){
              {
                  // Characteristic: Manufacturer Name
@@ -88,8 +99,19 @@ static const ble_uuid16_t gatt_svr_chr_get_model_number_uuid = BLE_UUID16_INIT(G
                 }},
     },
 
+    {    // trying to send 512 bytes
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = BLE_UUID16_DECLARE(0x180D), // Example UUID for Heart Rate Service
+        .characteristics = (struct ble_gatt_chr_def[]) { {
+            .uuid = BLE_UUID16_DECLARE(0x2A37), // Example UUID for Heart Rate Measurement Characteristic
+            .access_cb = gatt_svr_chr_access_512_bytes,
+            .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY, // Read and Notify flags
+        }, {
+            0, // No more characteristics in this service
+        } },
+    },
     {
-        0,
+        0, // No more services
     },
 };
 
@@ -114,6 +136,29 @@ static int gatt_svr_chr_access_device_info(uint16_t conn_handle,
 
   assert(0);
   return BLE_ATT_ERR_UNLIKELY;
+}
+
+static int gatt_svr_chr_access_512_bytes(uint16_t conn_handle, uint16_t attr_handle,
+                                  struct ble_gatt_access_ctxt *ctxt, void *arg) {
+    static int data_offset = 0;
+    uint16_t mtu = ble_att_mtu(conn_handle);
+    uint16_t chunk_size = mtu - 3; // Subtract 3 bytes for ATT header
+    uint16_t remaining = DATA_SIZE - data_offset;
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+        uint16_t len = remaining < chunk_size ? remaining : chunk_size;
+        int rc = os_mbuf_append(ctxt->om, data_chunk + data_offset, len);
+        if (rc != 0) {
+            return BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
+        data_offset += len;
+        if (data_offset >= DATA_SIZE) {
+            data_offset = 0; // Reset offset after sending all data
+        }
+        return 0;
+    }
+
+    return BLE_ATT_ERR_UNLIKELY;
 }
 
 static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len,
@@ -254,7 +299,7 @@ static int gatt_svr_chr_ota_control_cb(uint16_t conn_handle,
   assert(0);
   return BLE_ATT_ERR_UNLIKELY;
 }
-
+// set_preferred_mtu
 static int gatt_svr_chr_ota_data_cb(uint16_t conn_handle, uint16_t attr_handle,
                                     struct ble_gatt_access_ctxt *ctxt,
                                     void *arg) {
@@ -269,7 +314,11 @@ static int gatt_svr_chr_ota_data_cb(uint16_t conn_handle, uint16_t attr_handle,
   if (updating) {
     err = esp_ota_write(update_handle, (const void *)gatt_svr_chr_ota_data_val,
                         packet_size);
+    // if there is no error: increment packet count...
+    
     if (err != ESP_OK) {
+      // handle OTA write fail
+      
       ESP_LOGE(LOG_TAG_GATT_SVR, "esp_ota_write failed (%s)!",
                esp_err_to_name(err));
     }
@@ -281,7 +330,53 @@ static int gatt_svr_chr_ota_data_cb(uint16_t conn_handle, uint16_t attr_handle,
   return rc;
 }
 
+
+// I want to copy this string into data_chunk
+// "breaker_state: [0x05]
+const char *data_chunk_str = 
+"breaker_state: [0x05]\n"
+"primary_handle_status: [0x03]\n"
+"path_status: [0x01]\n"
+"meter_update_no: [0x00]\n"
+"period: [0x0000]\n"
+"phase_A_line_frequency: [59.976852]\n"
+"phase_A_rms_voltage: [2.280288]\n"
+"phase_A_rms_current: [0.000000]\n"
+"phase_A_power_factor: [1.000000]\n"
+"phase_A_active_power: [0.000000]\n"
+"phase_A_reactive_power: [0.000000]\n"
+"phase_A_app_power: [0.000000]\n"
+"phase_A_active_energy: [0.000000]\n"
+"phase_A_reactive_energy: [0.000000]\n"
+"phase_A_app_energy: [0.000000]\n"
+"phase_A_reverse_active_energy: [0.000000]\n"
+"phase_A_reverse_reactive_energy: [0.000000]\n"
+"phase_A_reverse_app_energy: [0.000000]\n"
+"breaker_state: [0x05]\n"
+"---------------------------------------\n"
+"phase_B_line_frequency: [59.976852]\n"
+"phase_B_rms_voltage: [2.280288]\n"
+"phase_B_rms_current: [0.000000]\n"
+"phase_B_power_factor: [1.000000]\n"
+"phase_B_active_power: [0.000000]\n"
+"phase_B_reactive_power: [0.000000]\n"
+"phase_B_app_power: [0.000000]\n"
+"phase_B_active_energy: [0.000000]\n"
+"phase_B_reactive_energy: [0.000000]\n"
+"phase_B_app_energy: [0.000000]\n"
+"phase_B_reverse_active_energy: [0.000000]\n"
+"phase_B_reverse_reactive_energy: [0.000000]\n"
+"phase_B_reverse_app_energy: [0.000000]\n";
+
+
 void gatt_svr_init() {
+  //just filling data, so it can be used by read_character callback.
+  //FILL_ARRAY(data_chunk, DATA_SIZE);
+  strncpy((char *)data_chunk, data_chunk_str, DATA_SIZE - 1);
+
+  
+
+  data_chunk[DATA_SIZE - 1] = '\0';
   ble_svc_gap_init();
   ble_svc_gatt_init();
   ble_gatts_count_cfg(gatt_svr_svcs);
