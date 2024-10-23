@@ -52,7 +52,7 @@ void   device__feature__free_unpacked
   assert(message->base.descriptor == &device__feature__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor device__feature__field_descriptors[3] =
+static const ProtobufCFieldDescriptor device__feature__field_descriptors[5] =
 {
   {
     "device_type",
@@ -90,16 +90,42 @@ static const ProtobufCFieldDescriptor device__feature__field_descriptors[3] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "wifi_support",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(DeviceFeature, has_wifi_support),
+    offsetof(DeviceFeature, wifi_support),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ble_support",
+    5,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BOOL,
+    offsetof(DeviceFeature, has_ble_support),
+    offsetof(DeviceFeature, ble_support),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned device__feature__field_indices_by_name[] = {
+  4,   /* field[4] = ble_support */
   2,   /* field[2] = current_rating */
   0,   /* field[0] = device_type */
   1,   /* field[1] = voltage_rating */
+  3,   /* field[3] = wifi_support */
 };
 static const ProtobufCIntRange device__feature__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor device__feature__descriptor =
 {
@@ -109,7 +135,7 @@ const ProtobufCMessageDescriptor device__feature__descriptor =
   "DeviceFeature",
   "",
   sizeof(DeviceFeature),
-  3,
+  5,
   device__feature__field_descriptors,
   device__feature__field_indices_by_name,
   1,  device__feature__number_ranges,

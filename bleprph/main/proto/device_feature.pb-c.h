@@ -31,10 +31,14 @@ struct  _DeviceFeature
   int32_t voltage_rating;
   protobuf_c_boolean has_current_rating;
   int32_t current_rating;
+  protobuf_c_boolean has_wifi_support;
+  protobuf_c_boolean wifi_support;
+  protobuf_c_boolean has_ble_support;
+  protobuf_c_boolean ble_support;
 };
 #define DEVICE__FEATURE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&device__feature__descriptor) \
-    , NULL, 0, 0, 0, 0 }
+    , NULL, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 
 /* DeviceFeature methods */

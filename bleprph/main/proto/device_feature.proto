@@ -4,4 +4,6 @@ message Device_Feature {
     optional string device_type = 1;
     optional int32 voltage_rating = 2;
     optional int32 current_rating = 3;
+    optional bool wifi_support = 4;
+    optional bool ble_support = 5;
 }

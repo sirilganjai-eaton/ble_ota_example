@@ -215,7 +215,7 @@ static int gatt_svr_chr_access_device_features(uint16_t conn_handle,
   ESP_LOGI(LOG_TAG_GATT_SVR, "Inside %s",__func__);
   uuid = ble_uuid_u16(ctxt->chr->uuid);
 
-  char *device_type = "Breaker";
+  //char *device_type = "Breaker";
   const int voltage_rating = 240;
   const int current_rating = 60;
 
@@ -224,10 +224,28 @@ static int gatt_svr_chr_access_device_features(uint16_t conn_handle,
     rc = os_mbuf_append(ctxt->om, device_type, strlen(device_type));
     return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
   }*/
+  DeviceFeature device_feature = DEVICE__FEATURE__INIT;
+  device_feature.device_type = "Breaker";
+  device_feature.has_voltage_rating = 1;
+  device_feature.voltage_rating = 240;
+  device_feature.has_current_rating = 1;
+  device_feature.current_rating = 60;
+
+  // tag 4,5 not present on the client side. yet we send them, and see what happens on the client side
+  device_feature.has_wifi_support = 1;
+  device_feature.wifi_support = 1;
+  device_feature.has_ble_support = 1;
+  device_feature.ble_support = 1;
+
+  // serialize the structure
+  size_t len = device__feature__get_packed_size(&device_feature);
+  uint8_t packed[len];
+  device__feature__pack(&device_feature, packed);
+
   // experiment
   if (uuid == GATT_DEVICE_TYPE_UUID) {
     // here, instead of device_type, it will be entire structure from protobuf
-    rc = os_mbuf_append(ctxt->om, device_type, strlen(device_type));
+    rc = os_mbuf_append(ctxt->om, packed, len);
     return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
   }
   if (uuid == GATT_VOLTAGE_RATING_UUID) {

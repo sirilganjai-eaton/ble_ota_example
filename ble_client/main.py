@@ -258,22 +258,36 @@ async def read_device_features():
             # Print the services and characteristics offered
             # Subscribe to Device Info service and characteristics
             #await client.start_notify(DEVICE_INFO_SERVICE_UUID, _device_info_notification_handler)
-            
-            device_type = await client.read_gatt_char(GATT_DEVICE_TYPE_UUID)
-            voltage_rating = await client.read_gatt_char(GATT_VOLTAGE_RATING_UUID)
-            current_rating = await client.read_gatt_char(GATT_CURRENT_RATING_UUID)
-
-            # Deserialize the data using protobuf
             device_feature = DeviceFeature
-            device_feature.device_type = device_type.decode()
-            device_feature.voltage_rating = int.from_bytes(voltage_rating, byteorder='little')
-            device_feature.current_rating = int.from_bytes(current_rating, byteorder='little')
+            #device_type = await client.read_gatt_char(GATT_DEVICE_TYPE_UUID)
+            #voltage_rating = await client.read_gatt_char(GATT_VOLTAGE_RATING_UUID)
+            #current_rating = await client.read_gatt_char(GATT_CURRENT_RATING_UUID)
+            device_feature_data = await client.read_gatt_char(GATT_DEVICE_TYPE_UUID)
+            device_feature = DeviceFeature.Device_Feature()
+            device_feature.ParseFromString(device_feature_data)
+            print("whole data")
+            print(device_feature)
+            print("Device Type")
+            print(device_feature.device_type)
+            print("Voltage Rating")
+            print(device_feature.voltage_rating)
 
-            # Use the unpacked message
-            print(f"Device Type: {device_feature.device_type}")
-            print(f"Voltage Rating: {device_feature.voltage_rating}")
-            print(f"Current Rating: {device_feature.current_rating}")
-            # Wait for notifications (adjust the sleep time as needed)
+            
+            
+            ## deserialize the data
+
+
+            #
+
+
+            #device_feature.voltage_rating = int.from_bytes(voltage_rating, byteorder='little')
+            #device_feature.current_rating = int.from_bytes(current_rating, byteorder='little')
+
+            ## Use the unpacked message
+            #print(f"Device Type: {device_feature.device_type}")
+            #print(f"Voltage Rating: {device_feature.voltage_rating}")
+            #print(f"Current Rating: {device_feature.current_rating}")
+            ## Wait for notifications (adjust the sleep time as needed)
             await asyncio.sleep(5)
 
             # Stop notifications
