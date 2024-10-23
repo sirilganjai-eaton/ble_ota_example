@@ -1,1 +1,2 @@
-/bleprph/build
+/bleprph/build/*
+.vscode/*

@@ -56,6 +56,7 @@ void sync_cb(void) {
 int gap_event_handler(struct ble_gap_event *event, void *arg) {
   switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
+      ble_hs_hci_util_set_data_len( event->connect.conn_handle, 256, 0x4290 );
       // A new connection was established or a connection attempt failed
       ESP_LOGI(LOG_TAG_GAP, "GAP: Connection %s: status=%d",
                event->connect.status == 0 ? "established" : "failed",

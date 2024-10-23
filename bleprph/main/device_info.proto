@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+message DeviceInfo {
+    required string device_name = 1;
+    required int32 firmware_version = 2;
+    required string device_type = 3;
+    required int32 voltage_rating = 4;
+    required bool supports_wifi = 5;
+}

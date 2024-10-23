@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "bleprph",
-    "project_version":    "ebe2989-dirty",
+    "project_version":    "7148080-dirty",
     "project_path":       "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph",
     "idf_path":           "C:/Espressif5.3/frameworks/esp-idf-v5.3.1",
     "build_dir":          "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/build",
@@ -1180,7 +1180,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/gap.c", "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/gatt_svr.c", "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/main.c" ],
+            "sources": [ "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/device_info.pb-c.c", "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/gap.c", "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/gatt_svr.c", "C:/Users/E0739939/Documents/__BLE_OTA/ble_ota-main/ble_ota-main/bleprph/main/main.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {

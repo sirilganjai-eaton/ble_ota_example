@@ -1,10 +1,10 @@
 import asyncio
 import datetime
 from bleak import BleakClient, BleakScanner
+import async_timeout
+import time
 
 
-OTA_DATA_UUID = '23408888-1F40-4CD8-9B89-CA8D45F8A5B0'
-OTA_CONTROL_UUID = '7AD671AA-21C0-46A4-B722-270E3AE3D830'
 
 SVR_CHR_OTA_CONTROL_NOP = bytearray.fromhex("00")
 SVR_CHR_OTA_CONTROL_REQUEST = bytearray.fromhex("01")
@@ -26,7 +26,14 @@ DEVICE_INFO_MANUFACTURE_CHR_UUID = '00002a29-0000-1000-8000-00805f9b34fb'#[::-1]
 # 16 bit uuid for Device Info
 DEVICE_INFO_MODEL_CHR_UUID = '00002a24-0000-1000-8000-00805f9b34fb'#[::-1] #bytearray.fromhex("242A")
 
+# OTA UUIDs
+OTA_DATA_UUID = '23408888-1F40-4CD8-9B89-CA8D45F8A5B0'
+OTA_CONTROL_UUID = '7AD671AA-21C0-46A4-B722-270E3AE3D830'
 
+# Device Info Protobuf
+DEVICE_INFO_PB = '6561746F-6E62-6C65-7365-727669636501'
+DEVICE_FIRMWARE_PB = '6561746F-6E62-6C65-7365-727669636502'
+DEVICE_VOLTAGE_PB = '6561746F-6E62-6C65-7365-727669636503'
 
 # defining 522 bytes service
 SERVICE_512_BYTES_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
@@ -107,6 +114,7 @@ async def send_ota(file_path):
 
         # compute the packet size
          # 253
+        
         print("Client MTU size: ", client.mtu_size)
         packet_size = (client.mtu_size - 3)
 
@@ -206,38 +214,77 @@ async def read_device_info():
     except Exception as e:
         print(f"An error occurred while reading device info: {e}")
 
-
-
-async def read_telemtry_data():
+async def change_mtu_size():
     try:
         esp32 = await _search_for_esp32()
         
         if esp32 is None:
             print("ESP32 not found.")
             return
-
+        
         async with BleakClient(esp32) as client:
-            try:
-                print("Reading Telemetry Data from the new service...")
+            for service in client.services:
+                for char in service.characteristics:
+                    if char.properties.write_without_response:
+                        print(f"Characteristic {char.uuid} max write without response size: {char.max_write_without_response_size}")
 
-                # Read the characteristic in chunks if necessary
-                data = bytearray()
-                chunk_size = 2500
-                offset = 0
+            print("Client MTU size: ", client.mtu_size)
+            print("Changing MTU Size...")
+            # Print the services and characteristics offered
+            # Request MTU size change
+            desired_mtu_size = 256  # Example desired MTU size
+            await client._backend._request_mtu(desired_mtu_size)
+            mtu_size = client.mtu_size
+            print(f"Requested MTU size: {desired_mtu_size}, Negotiated MTU size: {mtu_size}")
+            
+            # Define the handlers
+            # Subscribe to Device Info service and characteristics
+            #await client.start_notify(DEVICE_INFO_SERVICE_UUID, _device_info_notification_handler)
+            #await client.start
+    except Exception as e:
+        print(f"An error occurred while changing mtu size: {e}")
 
-                while len(data) < chunk_size:
-                    chunk = await client.read_gatt_char(CHARACTERISTIC_512_BYTES_UUID, offset=offset)
-                    data.extend(chunk)
-                    offset += len(chunk)
-                    if len(chunk) == 0:
-                        break  # No more data to read
-            except Exception as e:
-                print(f"An error occurred while reading Telemetry data: {e}")
+async def read_telemtry_data():
+    try:
+            esp32 = await _search_for_esp32()
+            
+            if esp32 is None:
+                print("ESP32 not found.")
                 return
-        string_data = data.decode('ascii') 
-        print("|----Telemetry Data----|")
-        print(string_data)
 
+            async with BleakClient(esp32) as client:
+                try:
+                    #client._backend._mtu_size = 256
+                    # Get the current MTU size
+                    
+                    
+                    mtu_size = client.mtu_size
+                    print(f"Client MTU size: {mtu_size}")
+
+                    # Calculate the packet size based on the MTU size
+                    packet_size = mtu_size - 3  # Subtract 3 bytes for ATT header
+                    print(f"Packet size: {packet_size}")
+
+                    print("Reading Telemetry Data from the new service...")
+                    data = bytearray()
+                    chunk_size = 2500
+                    offset = 0
+
+                    while len(data) < chunk_size:
+                        chunk = await client.read_gatt_char(CHARACTERISTIC_512_BYTES_UUID)
+                        print("len of chunk read is: ", len(chunk))
+                        data.extend(chunk)
+                        offset += len(chunk)
+                        if len(chunk) == 0:
+                            break  # No more data to read
+
+                    # Convert byte array to string
+                    string_data = data.decode('utf-8')
+                    print("|----Telemetry Data----|")
+                    print(string_data)  # This will interpret \n as new lines
+                except Exception as e:
+                    print(f"An error occurred while reading Telemetry data: {e}")
+                    return
     except Exception as e:
         print(f"An error occurred while reading Telemetry data: {e}")
 def main():
@@ -246,6 +293,7 @@ def main():
     print("1. Read Device Info")
     print("2. Send OTA")
     print("3. Read Telemetry Data")
+    print("4. Change MTU Size")
     option = input("Enter your choice: ")
     # if send OTA, then run the send_ota function
     if option == "2":
@@ -260,6 +308,10 @@ def main():
     elif option == "3":
         print("Reading Telemetry Data...")
         asyncio.run(read_telemtry_data())
+    
+    elif option == "4":
+        print("Change MTU Size")
+        asyncio.run(change_mtu_size())
 
 if __name__ == '__main__':
     main()

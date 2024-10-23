@@ -1,4 +1,8 @@
 #include "gatt_svr.h"
+#include "device_info.pb-c.h"
+
+
+
 #define DATA_SIZE 2500
 #define FILL_ARRAY(arr, size) \
     for (int i = 0; i < size; i++) { \
@@ -36,6 +40,11 @@ static int gatt_svr_chr_ota_data_cb(uint16_t conn_handle, uint16_t attr_handle,
                                     void *arg);
 
 static int gatt_svr_chr_access_device_info(uint16_t conn_handle,
+                                           uint16_t attr_handle,
+                                           struct ble_gatt_access_ctxt *ctxt,
+                                           void *arg);
+
+static int gatt_svr_chr_access_device_info_pb(uint16_t conn_handle,
                                            uint16_t attr_handle,
                                            struct ble_gatt_access_ctxt *ctxt,
                                            void *arg);
@@ -110,8 +119,25 @@ static const ble_uuid16_t gatt_svr_chr_get_model_number_uuid = BLE_UUID16_INIT(G
             0, // No more characteristics in this service
         } },
     },
-    {
-        0, // No more services
+    {   // Device Info PB service
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &gatt_svr_svc_get_device_info_PB_uuid.u,
+        .characteristics = (struct ble_gatt_chr_def[]) { {
+          .uuid = &gatt_svr_chr_get_device_name_PB_uuid.u,
+          .access_cb = gatt_svr_chr_access_device_info_pb,
+          .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+        }, {
+          .uuid = &gatt_svr_chr_get_fw_version_PB_uuid.u,
+          .access_cb = gatt_svr_chr_access_device_info_pb,
+          .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+        }, {
+            .uuid = &gatt_svr_chr_get_voltage_rating_PB_uuid.u,
+            .access_cb = gatt_svr_chr_access_device_info_pb,
+            .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+        }, {
+          0, // No more characteristics in this service
+        } 
+        },
     },
 };
 
@@ -120,9 +146,11 @@ static int gatt_svr_chr_access_device_info(uint16_t conn_handle,
                                            struct ble_gatt_access_ctxt *ctxt,
                                            void *arg) {
   uint16_t uuid;
-  int rc;
+  int rc = 0;
   ESP_LOGI(LOG_TAG_GATT_SVR, "Inside %s",__func__);
   uuid = ble_uuid_u16(ctxt->chr->uuid);
+  
+
 
   if (uuid == GATT_MODEL_NUMBER_UUID) {
     rc = os_mbuf_append(ctxt->om, model_num, strlen(model_num));
@@ -138,15 +166,64 @@ static int gatt_svr_chr_access_device_info(uint16_t conn_handle,
   return BLE_ATT_ERR_UNLIKELY;
 }
 
+//protobuf callback
+
+
+static int gatt_svr_chr_access_device_info_pb(uint16_t conn_handle,
+                                           uint16_t attr_handle,
+                                           struct ble_gatt_access_ctxt *ctxt,
+                                           void *arg){
+   /*                                        
+  uint16_t uuid;
+  int rc;
+  // protobuf buffer
+  DeviceInfo device_info = DEVICE_INFO__INIT;
+  // populate device info
+  //device_info.device_name = "Device_name";
+  device_info.firmware_version = 45;
+  device_info.device_type = "Sensor";
+  device_info.voltage_rating = 5;
+  device_info.supports_wifi = true;
+  uint8_t buffer[128]; // Adjust the buffer size as needed
+  size_t message_length = device_info__pack(&device_info, buffer);
+
+  static int data_offset = 0;
+  uint16_t mtu = ble_att_mtu(conn_handle);
+  uint16_t chunk_size = mtu - 3; // Subtract 3 bytes for ATT header
+  ESP_LOGI(LOG_TAG_GATT_SVR, "Inside %s",__func__);
+
+  uuid = ble_uuid_u16(ctxt->chr->uuid);
+  if (uuid == GATT_MANUFACTURER_NAME_PB_UUID) {
+    rc = os_mbuf_append(ctxt->om, device_info.device_name, strlen(device_info.device_name));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }
+
+  if (uuid == GATT_MODEL_NUMBER_PB_UUID) {
+    rc = os_mbuf_append(ctxt->om, &device_info.firmware_version, sizeof(device_info.firmware_version));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }
+
+  if (uuid == GATT_VOLTAGE_RATING_PB_UUID) {
+    rc = os_mbuf_append(ctxt->om, &device_info.voltage_rating, sizeof(device_info.voltage_rating));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }
+  assert(0);
+  */
+  return BLE_ATT_ERR_UNLIKELY;
+}
+
+
+
 static int gatt_svr_chr_access_512_bytes(uint16_t conn_handle, uint16_t attr_handle,
                                   struct ble_gatt_access_ctxt *ctxt, void *arg) {
     static int data_offset = 0;
     uint16_t mtu = ble_att_mtu(conn_handle);
     uint16_t chunk_size = mtu - 3; // Subtract 3 bytes for ATT header
     uint16_t remaining = DATA_SIZE - data_offset;
-
+    ESP_LOGI(LOG_TAG_GATT_SVR, "MTU SIZE: %d", mtu);
     if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
         uint16_t len = remaining < chunk_size ? remaining : chunk_size;
+        ESP_LOGI(LOG_TAG_GATT_SVR, "len: %d", len);
         int rc = os_mbuf_append(ctxt->om, data_chunk + data_offset, len);
         if (rc != 0) {
             return BLE_ATT_ERR_INSUFFICIENT_RES;
@@ -369,7 +446,14 @@ const char *data_chunk_str =
 "phase_B_reverse_app_energy: [0.000000]\n";
 
 
+
+
+
 void gatt_svr_init() {
+
+  // fill the device info, using protobuf
+  
+  
   //just filling data, so it can be used by read_character callback.
   //FILL_ARRAY(data_chunk, DATA_SIZE);
   strncpy((char *)data_chunk, data_chunk_str, DATA_SIZE - 1);

@@ -7,6 +7,7 @@
 #include "host/ble_gap.h"
 #include "host/ble_store.h"
 
+
 #define LOG_TAG_MAIN "main"
 static uint16_t ble_conn_handle;
 bool run_diagnostics() {
@@ -42,10 +43,25 @@ static int bleprph_gap_event(struct ble_gap_event *event, void *arg) {
               ESP_LOGI(LOG_TAG_MAIN, "Connection handle: %d", ble_conn_handle);
               // Initiate MTU exchange
               ble_att_set_preferred_mtu(BLE_ATT_MTU_MAX);
+              // my temp call
+              
               int rc = ble_gattc_exchange_mtu(ble_conn_handle, NULL, NULL);
-              if (rc != 0) {
-                  ESP_LOGE(LOG_TAG_MAIN, "Error initiating MTU exchange; rc=%d", rc);
-              }
+                if (rc != 0) {
+                    ESP_LOGE(LOG_TAG_MAIN, "Error initiating MTU exchange; rc=%d", rc);
+                }
+                rc = ble_hs_hci_util_set_data_len(ble_conn_handle, 251, 0x4290);
+                if (rc != 0) {
+                    ESP_LOGE(LOG_TAG_MAIN, "Error setting suggested default ble_hs_hci_util_set_data_len; rc=%d", rc);
+                }
+                // Set preferred data length
+                rc = ble_hs_hci_util_write_sugg_def_data_len(251, 0x4290);
+                if (rc != 0) {
+                    ESP_LOGE(LOG_TAG_MAIN, "Error setting suggested default data length; rc=%d", rc);
+                }
+                rc = ble_gap_set_data_len(ble_conn_handle, 251, 0x4290);
+                if (rc != 0) {
+                    ESP_LOGE(LOG_TAG_MAIN, "Error setting data length; rc=%d", rc);
+                }
             ESP_LOGI("BLE", "Connection established");
             break;
         case BLE_GAP_EVENT_DISCONNECT:
@@ -138,6 +154,22 @@ void app_main(void) {
   bleprph_set_security_params();
 
 
+  // Register GAP event handler
+  //ble_gap_set_event_cb(bleprph_gap_event, NULL,NULL);
+  /*
+  int rc = ble_hs_hci_util_write_sugg_def_data_len((uint16_t)0x00fb, (uint16_t)0x4290);
+  if (rc != 0) {
+    ESP_LOGE(LOG_TAG_MAIN, "Error setting suggested default data length; rc=%d", rc);
+  }
+  uint16_t out_sugg_max_tx_octets = 0;
+  uint16_t out_sugg_max_tx_time = 0;
+ ble_gap_read_sugg_def_data_len(&out_sugg_max_tx_octets, &out_sugg_max_tx_time);
+  ESP_LOGI(LOG_TAG_MAIN, "Suggested Max Tx Octets: %d", out_sugg_max_tx_octets);
+  ESP_LOGI(LOG_TAG_MAIN, "Suggested Max Tx Time: %d", out_sugg_max_tx_time);
+ */
+  //ble_gap_event_listener_register(bleprph_gap_event, NULL, NULL);
+  //le_gap_event_listener_register(NULL, bleprph_gap_event, NULL);
 
   nimble_port_freertos_init(host_task);
+  
 }
