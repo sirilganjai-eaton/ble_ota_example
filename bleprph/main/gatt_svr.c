@@ -1,4 +1,9 @@
 #include "gatt_svr.h"
+
+// include the header from proto dir
+#include "proto/device_feature.pb-c.h"
+
+
 #define DATA_SIZE 2500
 #define FILL_ARRAY(arr, size) \
     for (int i = 0; i < size; i++) { \
@@ -19,6 +24,9 @@ uint16_t packet_size = 0;
 
 static const char *manuf_name = "EATON";
 static const char *model_num = "ESP32_Test_Device";
+
+
+
 
 // fill this data with the index
 uint8_t data_chunk[DATA_SIZE]= {0};
@@ -42,7 +50,14 @@ static int gatt_svr_chr_access_device_info(uint16_t conn_handle,
 
 static int gatt_svr_chr_access_512_bytes(uint16_t conn_handle, uint16_t attr_handle,
                                   struct ble_gatt_access_ctxt *ctxt, void *arg);
-                                  
+
+
+//device features
+static int gatt_svr_chr_access_device_features(uint16_t conn_handle,
+                                           uint16_t attr_handle,
+                                           struct ble_gatt_access_ctxt *ctxt,
+                                           void *arg);
+
 static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
   /*
   
@@ -99,7 +114,7 @@ static const ble_uuid16_t gatt_svr_chr_get_model_number_uuid = BLE_UUID16_INIT(G
                 }},
     },
 
-    {    // trying to send 512 bytes
+    {    // telemetry
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
         .uuid = BLE_UUID16_DECLARE(0x180D), // Example UUID for Heart Rate Service
         .characteristics = (struct ble_gatt_chr_def[]) { {
@@ -109,6 +124,34 @@ static const ble_uuid16_t gatt_svr_chr_get_model_number_uuid = BLE_UUID16_INIT(G
         }, {
             0, // No more characteristics in this service
         } },
+    },
+    {
+        // device features
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &gatt_svr_svc_get_device_features_uuid.u,
+        .characteristics =
+            (struct ble_gatt_chr_def[]){
+                {
+                    // characteristic: Device Type
+                    .uuid = &gatt_svr_chr_get_device_type_uuid.u,
+                    .access_cb = gatt_svr_chr_access_device_features,
+                    .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                },
+                {
+                    // characteristic: Voltage Rating
+                    .uuid = &gatt_svr_chr_get_voltage_rating_uuid.u,
+                    .access_cb = gatt_svr_chr_access_device_features,
+                    .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                },
+                {
+                    // characteristic: Current Rating
+                    .uuid = &gatt_svr_chr_get_current_rating_uuid.u,
+                    .access_cb = gatt_svr_chr_access_device_features,
+                    .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+                },
+                {
+                    0,
+                }},
     },
     {
         0, // No more services
@@ -161,6 +204,43 @@ static int gatt_svr_chr_access_512_bytes(uint16_t conn_handle, uint16_t attr_han
     return BLE_ATT_ERR_UNLIKELY;
 }
 
+
+static int gatt_svr_chr_access_device_features(uint16_t conn_handle,
+                                           uint16_t attr_handle,
+                                           struct ble_gatt_access_ctxt *ctxt,
+                                           void *arg) 
+{
+  uint16_t uuid;
+  int rc;
+  ESP_LOGI(LOG_TAG_GATT_SVR, "Inside %s",__func__);
+  uuid = ble_uuid_u16(ctxt->chr->uuid);
+
+  char *device_type = "Breaker";
+  const int voltage_rating = 240;
+  const int current_rating = 60;
+
+  // actual
+  /*if (uuid == GATT_DEVICE_TYPE_UUID) {
+    rc = os_mbuf_append(ctxt->om, device_type, strlen(device_type));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }*/
+  // experiment
+  if (uuid == GATT_DEVICE_TYPE_UUID) {
+    // here, instead of device_type, it will be entire structure from protobuf
+    rc = os_mbuf_append(ctxt->om, device_type, strlen(device_type));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }
+  if (uuid == GATT_VOLTAGE_RATING_UUID) {
+    rc = os_mbuf_append(ctxt->om, (const void *)&voltage_rating, sizeof(voltage_rating));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }
+
+  if (uuid == GATT_CURRENT_RATING_UUID) {
+    rc = os_mbuf_append(ctxt->om, (const void *)&current_rating, sizeof(current_rating));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  }
+  return 0;
+}
 static int gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len,
                               uint16_t max_len, void *dst, uint16_t *len) {
   uint16_t om_len;

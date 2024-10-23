@@ -38,7 +38,9 @@
     "ble_esp_hs.h": "c",
     "ble_gap.h": "c",
     "compare": "c",
-    "cstdint": "c"
+    "cstdint": "c",
+    "device_feature.pb-c.h": "c",
+    "protobuf-c.h": "c"
   },
   "idf.port": "/dev/tty.usbserial-113330",
   "idf.flashType": "UART",
@@ -52,5 +54,5 @@
     "ESP_ROM_ELF_DIR": "c:\\Espressif5.3\\tools\\idf-driver\\tools\\esp-rom-elfs\\20240305/"
   },
   "idf.gitPathWin": "c:\\Espressif5.3\\tools\\idf-driver\\tools\\idf-git\\2.39.2\\cmd\\git.exe",
-  "idf.portWin": "COM7"
+  "idf.portWin": "COM37"
 }

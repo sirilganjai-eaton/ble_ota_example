@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+message Device_Feature {
+    optional string device_type = 1;
+    optional int32 voltage_rating = 2;
+    optional int32 current_rating = 3;
+}
