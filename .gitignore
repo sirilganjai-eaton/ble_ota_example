@@ -1,1 +1,3 @@
 /bleprph/build
+.vscode/*
+/venv/*
