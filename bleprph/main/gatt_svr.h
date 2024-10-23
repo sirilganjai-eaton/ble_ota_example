@@ -6,11 +6,21 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
+
+
+
 #define LOG_TAG_GATT_SVR "gatt_svr"
 #define REBOOT_DEEP_SLEEP_TIMEOUT 500
 #define GATT_DEVICE_INFO_UUID 0x180A
 #define GATT_MANUFACTURER_NAME_UUID 0x2A29
 #define GATT_MODEL_NUMBER_UUID 0x2A24
+
+
+//Device Feature IDs
+#define GATT_DEVICE_FEATURES_UUID 0x180F //service
+#define GATT_DEVICE_TYPE_UUID 0x2A3C  //chr
+#define GATT_VOLTAGE_RATING_UUID 0x226C  //chr
+#define GATT_CURRENT_RATING_UUID 0x2A69  //chr
 
 typedef enum {
   SVR_CHR_OTA_CONTROL_NOP,
@@ -45,6 +55,15 @@ static const ble_uuid128_t gatt_svr_chr_ota_data_uuid =
 static const ble_uuid16_t gatt_svr_svc_get_device_info_uuid = BLE_UUID16_INIT(GATT_DEVICE_INFO_UUID);
 static const ble_uuid16_t gatt_svr_chr_get_manufacturer_name_uuid = BLE_UUID16_INIT(GATT_MANUFACTURER_NAME_UUID);
 static const ble_uuid16_t gatt_svr_chr_get_model_number_uuid = BLE_UUID16_INIT(GATT_MODEL_NUMBER_UUID);
+
+
+//service: Device Features
+static const ble_uuid16_t gatt_svr_svc_get_device_features_uuid = BLE_UUID16_INIT(GATT_DEVICE_FEATURES_UUID);
+static const ble_uuid16_t gatt_svr_chr_get_device_type_uuid = BLE_UUID16_INIT(GATT_DEVICE_TYPE_UUID);
+static const ble_uuid16_t gatt_svr_chr_get_voltage_rating_uuid = BLE_UUID16_INIT(GATT_VOLTAGE_RATING_UUID);
+static const ble_uuid16_t gatt_svr_chr_get_current_rating_uuid = BLE_UUID16_INIT(GATT_CURRENT_RATING_UUID);
+
+
 
 
 void gatt_svr_init();
